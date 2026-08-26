@@ -1,4 +1,4 @@
-# Nullbedingung nach docs/spec.md Paragraph 34, .NET-Variante.
+dotnet CycloneDX eShopOnWeb.sln -o ./sbom --json# Nullbedingung nach docs/spec.md Paragraph 34, .NET-Variante.
 # Automatisierungs-Repo WeierE1/CRA-Private, Issues #10 und #52.
 #
 #   Baut und testet dieses Projekt in der CI gruen, OHNE fremde Zugangsdaten
