@@ -1,0 +1,96 @@
+# Nullbedingung nach docs/spec.md Paragraph 34, .NET-Variante.
+# Automatisierungs-Repo WeierE1/CRA-Private, Issues #10 und #52.
+#
+#   Baut und testet dieses Projekt in der CI gruen, OHNE fremde Zugangsdaten
+#   und OHNE private Registry-Zugaenge?
+#
+# ACHTUNG ZUM UMFANG: .NET ist im Piloten AUSSERHALB des Umfangs (spec.md
+# Paragraph 0.3, Paragraph 37.2). Dieser Fork traegt keine MVP-Abnahmepruefung.
+# Er existiert fuer genau zwei Dinge:
+#
+#   1. Die Messung aus Paragraph 12.3 gegenpruefen - taucht das Zielframework
+#      in der CycloneDX-SBOM auf, oder nicht? Am 24.08.2026 war die Antwort
+#      NEIN, und daraus folgt die Zeile "die Runtime-Plattform ist nicht
+#      abgedeckt" in jeder Abdeckungsaussage. Eine gemessene Aussage verfaellt;
+#      hier laesst sie sich nachmessen.
+#   2. Den Weg ins Zielbild nicht verbauen (P4).
+#
+# Das SDK ist FESTGENAGELT ueber global.json (8.0.x). Nicht das, was auf dem
+# Runner zufaellig liegt.
+name: nullbedingung
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: .NET SDK einrichten
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Wiederherstellen
+        run: dotnet restore
+
+      - name: Bauen
+        run: dotnet build --no-restore --configuration Release
+
+      # TRX ist fuer .NET das, was Surefire-XML fuer Maven ist (Paragraph 24.2).
+      - name: Testen
+        run: dotnet test --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory ./testergebnisse
+
+      - name: TRX als Artefakt ablegen
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: trx-testergebnisse
+          path: ./testergebnisse/**/*.trx
+          if-no-files-found: warn
+          retention-days: 30
+
+      # --- Paragraph 12.3 nachmessen ------------------------------------------
+      # Die Spec haelt fest: ein net9.0-Projekt durch dotnet CycloneDX 6.2.0
+      # erzeugte eine SBOM, in der das Zielframework NIRGENDS auftaucht - nicht
+      # als Komponente, nicht in metadata.component, nicht als Property.
+      # Daraus folgt, dass eine CVE in .NET selbst in KEINER DT-Version als
+      # Finding erscheinen kann: die Luecke liegt in der SBOM, nicht in DT.
+      #
+      # Dieser Schritt fuehrt genau diesen grep erneut aus. Er darf scheitern,
+      # ohne die Nullbedingung rot zu machen - er misst, er torwacht nicht.
+      - name: SBOM erzeugen und Paragraph 12.3 gegenpruefen
+        if: always()
+        continue-on-error: true
+        run: |
+          dotnet tool install --global CycloneDX
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet CycloneDX eShopOnWeb.sln -o ./sbom -j || dotnet CycloneDX . -o ./sbom -j
+          echo "## Paragraph 12.3 nachgemessen" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          for muster in net8.0 net9.0 NETCore.App framework operating-system platform; do
+            treffer=$(grep -oic "$muster" ./sbom/bom.json || true)
+            echo "| \`$muster\` | ${treffer:-0} Treffer |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Null Treffer bei allen sechs bestaetigt die Messung vom 24.08.2026:' >> "$GITHUB_STEP_SUMMARY"
+          echo 'das Zielframework steht nicht in der SBOM, also kann eine CVE in' >> "$GITHUB_STEP_SUMMARY"
+          echo '.NET selbst in keiner DT-Version als Finding erscheinen.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: SBOM als Artefakt ablegen
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v5
+        with:
+          name: cyclonedx-sbom
+          path: ./sbom/**
+          if-no-files-found: warn
+          retention-days: 30
