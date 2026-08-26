@@ -1,4 +1,4 @@
-dotnet CycloneDX eShopOnWeb.sln -o ./sbom --json# Nullbedingung nach docs/spec.md Paragraph 34, .NET-Variante.
+# Nullbedingung nach docs/spec.md Paragraph 34, .NET-Variante.
 # Automatisierungs-Repo WeierE1/CRA-Private, Issues #10 und #52.
 #
 #   Baut und testet dieses Projekt in der CI gruen, OHNE fremde Zugangsdaten
@@ -67,25 +67,34 @@ jobs:
       # Daraus folgt, dass eine CVE in .NET selbst in KEINER DT-Version als
       # Finding erscheinen kann: die Luecke liegt in der SBOM, nicht in DT.
       #
-      # Dieser Schritt fuehrt genau diesen grep erneut aus. Er darf scheitern,
-      # ohne die Nullbedingung rot zu machen - er misst, er torwacht nicht.
+      # Dieser Schritt fuehrt genau diesen grep erneut aus. Er misst, er
+      # torwacht nicht - deshalb continue-on-error.
       - name: SBOM erzeugen und Paragraph 12.3 gegenpruefen
         if: always()
         continue-on-error: true
         run: |
           dotnet tool install --global CycloneDX
           export PATH="$PATH:$HOME/.dotnet/tools"
-          dotnet CycloneDX eShopOnWeb.sln -o ./sbom -j || dotnet CycloneDX . -o ./sbom -j
-          echo "## Paragraph 12.3 nachgemessen" >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
+          dotnet CycloneDX eShopOnWeb.sln --out ./sbom --json
+          ls -la ./sbom
+          {
+            echo "## Paragraph 12.3 nachgemessen"
+            echo
+            echo "| Muster | Treffer in bom.json |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
           for muster in net8.0 net9.0 NETCore.App framework operating-system platform; do
-            treffer=$(grep -oic "$muster" ./sbom/bom.json || true)
-            echo "| \`$muster\` | ${treffer:-0} Treffer |" >> "$GITHUB_STEP_SUMMARY"
+            treffer=$(grep -oic -- "$muster" ./sbom/bom.json || true)
+            echo "| \`$muster\` | ${treffer:-0} |" >> "$GITHUB_STEP_SUMMARY"
           done
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Null Treffer bei allen sechs bestaetigt die Messung vom 24.08.2026:' >> "$GITHUB_STEP_SUMMARY"
-          echo 'das Zielframework steht nicht in der SBOM, also kann eine CVE in' >> "$GITHUB_STEP_SUMMARY"
-          echo '.NET selbst in keiner DT-Version als Finding erscheinen.' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo
+            echo "Komponenten mit purl in der SBOM: $(grep -oc '\"purl\"' ./sbom/bom.json || echo 0)"
+            echo
+            echo "Null Treffer bei den Framework-Mustern bestaetigt die Messung vom"
+            echo "24.08.2026: das Zielframework steht nicht in der SBOM, also kann eine"
+            echo "CVE in .NET selbst in keiner DT-Version als Finding erscheinen."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: SBOM als Artefakt ablegen
         if: always()
