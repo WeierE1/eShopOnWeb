@@ -40,14 +40,16 @@ jobs:
           global-json-file: global.json
 
       - name: Wiederherstellen
-        run: dotnet restore
+        # Zwei Solutions im Wurzelverzeichnis (Everything.sln, eShopOnWeb.sln).
+        # Ohne ausdrueckliche Angabe bricht MSBUILD mit MSB1011 ab.
+        run: dotnet restore eShopOnWeb.sln
 
       - name: Bauen
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build eShopOnWeb.sln --no-restore --configuration Release
 
       # TRX ist fuer .NET das, was Surefire-XML fuer Maven ist (Paragraph 24.2).
       - name: Testen
-        run: dotnet test --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory ./testergebnisse
+        run: dotnet test eShopOnWeb.sln --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --results-directory ./testergebnisse
 
       - name: TRX als Artefakt ablegen
         if: always()
