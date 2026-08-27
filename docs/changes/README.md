@@ -15,11 +15,9 @@ CycloneDX-SBOM vollständig). Details: CRA-Private Issue #52.
 | PR | Merged (UTC) | Title | Issues | Size | Detail |
 |---|---|---|---|---|---|
 
+| [pr-002](https://github.com/WeierE1/eShopOnWeb/pull/2) | 2026-08-27 09:37 | CLAUDE.md: Rolle im CRA-Piloten, Regeln, Katalog-Pflicht | — | +31/−0 · 1 | [→](pr-002-claude-md-rolle-regeln-katalog.md) |
+| [pr-001](https://github.com/WeierE1/eShopOnWeb/pull/1) | 2026-08-27 09:30 | Change catalogue anlegen | — | +38/−0 · 1 | [→](pr-001-change-catalogue-anlegen.md) |
 <!-- INDEX:END -->
-
-Noch kein Eintrag — dieser Fork hat bisher keine eigenen Pull Requests des
-Piloten. (Die Upstream-Historie mit ihren PRs gehört nicht zu diesem Katalog.)
-
 ## Was der Katalog nicht abdeckt
 
 **Vier Commits erreichten den Standardzweig direkt, ohne PR und ohne Review** —
